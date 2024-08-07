@@ -1,5 +1,11 @@
+import Chat from "./Chat";
+
 function App() {
-  return <div></div>;
+  return (
+    <>
+      <Chat />
+    </>
+  );
 }
 
 export default App;
