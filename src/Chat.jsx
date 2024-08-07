@@ -1,16 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import "tailwindcss/tailwind.css";
-
-const messagesData = [
-  { id: 1, text: "Hello!", sender: "user", timestamp: "10:00 AM" },
-  { id: 2, text: "Hi there!", sender: "other", timestamp: "10:01 AM" },
-  // Add more initial messages if needed
-];
+import axios from "axios";
 
 const ChatPage = () => {
-  const [messages, setMessages] = useState(messagesData);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
+  const backendChatURL = "http://localhost:3000/chat";
+  const [waiting, setWaiting] = useState(false);
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -26,9 +22,29 @@ const ChatPage = () => {
       }),
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
     setInput("");
+    setWaiting(true);
+    getReply(newMessage.text);
   };
+
+  async function getReply(input) {
+    let reply = { sender: "other" };
+
+    try {
+      const response = await axios.post(backendChatURL, {
+        query: input,
+      });
+      reply.text = response?.data?.content;
+      console.log(response.data);
+    } catch (error) {
+      console.error(error);
+      reply.text = "error loading message";
+    }
+
+    setMessages((prevMessages) => [...prevMessages, reply]);
+    setWaiting(false);
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,26 +55,37 @@ const ChatPage = () => {
   }, [messages]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
+    <div className="flex flex-col h-screen bg-gray-100 mx-32 border border-1 border-slate-300">
       <div className="flex-1 overflow-y-auto p-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${
-              message.sender === "user" ? "justify-end" : "justify-start"
-            } mb-4`}
-          >
+        {messages.length > 0 &&
+          messages.map((message, index) => (
             <div
-              className={`max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl rounded-lg px-4 py-2 relative shadow-md ${
-                message.sender === "user"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-black"
-              }`}
+              key={index}
+              className={`flex ${
+                message.sender === "user" ? "justify-end" : "justify-start"
+              } mb-4`}
             >
-              {message.text}
+              <div
+                className={`max-w-xs md:max-w-md lg:max-w-lg xl:max-w-xl rounded-lg px-4 py-2 relative shadow-md ${
+                  message.sender === "user"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-black"
+                }`}
+              >
+                {message.text}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+
+        {waiting && (
+          <p className="">
+            <svg
+              className="animate-spin h-5 w-5 mr-3 ..."
+              viewBox="0 0 24 24"
+            ></svg>
+            fetching reply...
+          </p>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
